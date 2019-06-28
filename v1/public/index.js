@@ -30,6 +30,15 @@ function SignalingServer(url) {
         case 'login_resp':
             handleLoginResp(json);
             break;
+        case 'candidate':
+            handleCandidate(json);
+            break;
+        case 'offer':
+            handleOffer(json);
+            break;
+        case 'answer':
+            handleAnswer(json);
+            break;
         }
     }
 
@@ -41,6 +50,27 @@ function SignalingServer(url) {
             pendingPromise.resolve(null)
         }
         pendingPromise = {};
+    }
+
+    const handleCandidate = (msg) => {
+        console.log(Date.now() + ' ws: got candidate')
+        if (this.onCandidate && typeof this.onCandidate === 'function') {
+            this.onCandidate(msg.candidate);
+        }
+    }
+
+    const handleOffer = (msg) => {
+        console.log(Date.now() + ' ws: got offer')
+        if (this.onOffer && typeof this.onOffer === 'function') {
+            this.onOffer(msg.offer);
+        }
+    }
+
+    const handleAnswer = (msg) => {
+        console.log(Date.now() + ' ws: got answer')
+        if (this.onAnswer && typeof this.onAnswer === 'function') {
+            this.onAnswer(msg.answer);
+        }
     }
 
     this.getSessId = () => sessId;
@@ -68,16 +98,18 @@ function SignalingServer(url) {
     this.send = (obj) => {
         ws.send(JSON.stringify(obj));
     }
-
-
 }
 
 let sigServer;
-let yourConnection;
+let rtcConnection;
 
 const btnSessNew = document.querySelector('#btn_sess_new');
 const sessIdLabel = document.querySelector('#session_id_p');
-const yourVideo = document.querySelector('#video');
+const videoElem = document.querySelector('#video');
+
+const btnJoinSess = document.querySelector('#btn_join_sess');
+const inputSessId = document.querySelector('#input_sess_id');
+const inputNickname = document.querySelector('#input_nickname');
 
 btnSessNew.onclick = async () => {
 
@@ -97,14 +129,13 @@ btnSessNew.onclick = async () => {
         audio: false
     };
     const stream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
-    yourVideo.srcObject = stream;
+    videoElem.srcObject = stream;
 
-    let configuration = { };
-    yourConnection = new RTCPeerConnection(configuration);
-    yourConnection.addStream(stream);
+    rtcConnection = new RTCPeerConnection({});
+    rtcConnection.addStream(stream);
 
     // Setup ice handling
-    yourConnection.onicecandidate = function (event) {
+    rtcConnection.onicecandidate = function (event) {
         console.log('on ice')
         if (event.candidate) {
             sigServer.send({
@@ -114,9 +145,14 @@ btnSessNew.onclick = async () => {
         }
     };
 
-    const offer = await yourConnection.createOffer();
+    const offer = await rtcConnection.createOffer();
     console.log('offer created');
-    yourConnection.setLocalDescription(offer);
+    rtcConnection.setLocalDescription(offer);
+
+    sigServer.onAnswer = (answer) => {
+        rtcConnection.setRemoteDescription(new RTCSessionDescription(answer));
+        console.log('got answer');
+    }
 
     sigServer.send({
         type: "offer",
@@ -126,7 +162,53 @@ btnSessNew.onclick = async () => {
     sessIdLabel.innerHTML = 'Session established. Id=' + sessId;
 }
 
+btnJoinSess.onclick = async () => {
+    sigServer = new SignalingServer('ws://' + window.location.host);
 
+    console.log('j gona connect');
+    await sigServer.connect();
+    console.log('j connected');
+
+    rtcConnection = new RTCPeerConnection({});
+
+    rtcConnection.ontrack = function (e) {
+        videoElem.srcObject = e.streams[0];
+    };
+
+    rtcConnection.onicecandidate = function (event) {
+        console.log('on ice')
+        if (event.candidate) {
+            sigServer.send({
+                type: "candidate",
+                candidate: event.candidate
+            });
+        }
+    };
+
+    sigServer.onOffer = (offer) => {
+        console.log('got offer')
+        rtcConnection.setRemoteDescription(new RTCSessionDescription(offer));
+        rtcConnection.createAnswer().then(function (answer) {
+            rtcConnection.setLocalDescription(answer);
+            sigServer.send({
+                type: "answer",
+                answer: answer
+            });
+        }, function (error) {
+            console.error(error);
+        });
+    }
+
+    sigServer.onCandidate = (cand) => {
+        rtcConnection.addIceCandidate(new RTCIceCandidate(cand));
+    }
+
+    sigServer.send({
+        type: 'join',
+        sess_id: inputSessId.value,
+        nickname: inputNickname.value
+    });
+}
 
 function setupPeerConnection(stream) {
 
