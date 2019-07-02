@@ -1,21 +1,23 @@
 import React from "react";
+
 import "./App.css";
+import Footer from "./Footer";
 import "./HrefButton.css";
+import InitialScreen from "./InitalScreen";
+import logo from "./logo.svg";
 
 export default class App extends React.Component<{}, {}> {
     public render() {
         return (
             <div className="container-fluid">
                 <div className="row">
-                    <div className="col-sm-6">
-                        <button className="HrefButton">Create session</button>
-                        to broadcast your screen
-                    </div>
-                    <div className="col-sm-6">
-                        ...or <button className="HrefButton">join session</button>
-                        to watch.
-                    </div>
+                    <h1 className="col-sm-12 App-header2">
+                        <img src={logo} className="App-logo" alt="logo" />
+                        BeamViewer
+                    </h1>
                 </div>
+                <InitialScreen/>
+                <Footer/>
             </div>
         );
     }
