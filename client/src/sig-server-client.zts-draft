@@ -1,0 +1,80 @@
+import { ISigServerMsg } from "./interfaces";
+
+// TODO: finish
+
+export class SigServerClient {
+    private url: string;
+    private ws: WebSocket;
+
+    private pendingPromise: Promise<any>;
+
+    constructor(url: string) {
+        this.url = url;
+        this.ws = null;
+    }
+
+    public connect(): Promise<Event> {
+        return new Promise<Event>((resolve, reject) => {
+            this.ws = new WebSocket(this.url);
+            this.ws.onopen = resolve;
+            this.ws.onerror = reject;
+            this.ws.onmessage = this.onMessage;
+        });
+    }
+
+    private onMessage(msg: MessageEvent): void {
+        let json: ISigServerMsg;
+        try {
+            json = JSON.parse(msg.data);
+        } catch (e) {
+            console.warn("ws: " + e.message + ". msg.data=" + msg.data);
+            return;
+        }
+        console.log("ws: ", json);
+        switch (json.type) {
+        case "login_resp":
+            this.handleLoginResp(json);
+            break;
+        case "candidate":
+            this.handleCandidate(json);
+            break;
+        case "offer":
+            this.handleOffer(json);
+            break;
+        case "answer":
+            handleAnswer(json);
+            break;
+        }
+    }
+
+    private handleLoginResp(resp: ISigServerMsg) {
+        if (resp.status === "ok") {
+            this.pendingPromise.resolve(sessId);
+        } else {
+            console.warn('ws: ' + JSON.stringify(resp));
+            pendingPromise.resolve(null)
+        }
+        pendingPromise = {};
+    }
+
+    const handleCandidate = (msg) => {
+        console.log(Date.now() + ' ws: got candidate')
+        if (this.onCandidate && typeof this.onCandidate === 'function') {
+            this.onCandidate(msg.candidate);
+        }
+    }
+
+    const handleOffer = (msg) => {
+        console.log(Date.now() + ' ws: got offer')
+        if (this.onOffer && typeof this.onOffer === 'function') {
+            this.onOffer(msg.offer);
+        }
+    }
+
+    const handleAnswer = (msg) => {
+        console.log(Date.now() + ' ws: got answer')
+        if (this.onAnswer && typeof this.onAnswer === 'function') {
+            this.onAnswer(msg.answer);
+        }
+    }
+}

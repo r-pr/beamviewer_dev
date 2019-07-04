@@ -6,7 +6,8 @@
     ],
     "jsRules": {},
     "rules": {
-        "indent": [true, "spaces", 4]
+        "indent": [true, "spaces", 4],
+        "object-literal-sort-keys": false
     },
     "rulesDirectory": []
 }
