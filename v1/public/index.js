@@ -1,6 +1,6 @@
 
 function generateRandomString() {
-    const len = 16;
+    const len = 3;
     const numbers = new Uint8Array(len);
     const letters = [];
     window.crypto.getRandomValues(numbers);

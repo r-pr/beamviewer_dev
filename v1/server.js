@@ -1,4 +1,5 @@
 const http = require('http')
+const path = require('path')
 const express = require('express')
 const WebSocket = require('ws');
 const app = express()
@@ -6,7 +7,7 @@ const port = process.env.PORT || 3322
 
 // setting up http server
 
-app.use(express.static('public'))
+app.use(express.static(path.join(__dirname, 'public') ))
 app.get('*', (req, res) => res.send('hello from Beamviewer'))
 
 const httpServer = http.createServer(app);
