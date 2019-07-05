@@ -1,3 +1,4 @@
+const wsProtocol = (window.location.protocol === 'https:') ? 'wss' : 'ws';
 
 function generateRandomString() {
     const len = 3;
@@ -7,7 +8,6 @@ function generateRandomString() {
     numbers.forEach( n => letters.push(n.toString(16)) );
     return letters.join('')
 }
-
 
 function SignalingServer(url) {
 
@@ -111,9 +111,9 @@ const btnJoinSess = document.querySelector('#btn_join_sess');
 const inputSessId = document.querySelector('#input_sess_id');
 const inputNickname = document.querySelector('#input_nickname');
 
-btnSessNew.onclick = async () => {
 
-    const wsProtocol = (window.location.protocol === 'https:') ? 'wss' : 'ws';
+
+btnSessNew.onclick = async () => {
 
     sigServer = new SignalingServer(`${wsProtocol}://${window.location.host}`);
 
@@ -165,7 +165,8 @@ btnSessNew.onclick = async () => {
 }
 
 btnJoinSess.onclick = async () => {
-    sigServer = new SignalingServer('ws://' + window.location.host);
+    
+    sigServer = new SignalingServer(`${wsProtocol}://${window.location.host}`);
 
     console.log('j gona connect');
     await sigServer.connect();
