@@ -113,7 +113,9 @@ const inputNickname = document.querySelector('#input_nickname');
 
 btnSessNew.onclick = async () => {
 
-    sigServer = new SignalingServer('ws://' + window.location.host);
+    const wsProtocol = (window.location.protocol === 'https:') ? 'wss' : 'ws';
+
+    sigServer = new SignalingServer(`${wsProtocol}://${window.location.host}`);
 
     console.log('gona connect');
     await sigServer.connect();
