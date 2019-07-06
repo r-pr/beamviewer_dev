@@ -180,9 +180,32 @@ const btnJoinSess = document.querySelector('#btn_join_sess');
 const inputSessId = document.querySelector('#input_sess_id');
 const inputNickname = document.querySelector('#input_nickname');
 
+// dictionary. key = nick; val = rtcpeerconn
+const subscribers = {
 
+};
 
-btnSessNew.onclick = async () => {
+let tmpConn = null;
+let candidatesSent = false;
+
+async function setUpPublisher_v2() {
+
+    function createTmpConn(strm) {
+        tmpConn = new RTCPeerConnection({});
+        tmpConn.addStream(stream);
+        if (!candidatesSent) {
+            tmpConn.onicecandidate = function (event) {
+                console.log('on ice')
+                if (event.candidate) {
+                    sigServer.send({
+                        type: "candidate",
+                        candidate: event.candidate
+                    });
+                }
+            };
+            candidatesSent = true;
+        }
+    }
 
     sigServer = new SignalingServer(`${wsProtocol}://${window.location.host}`);
 
@@ -202,7 +225,104 @@ btnSessNew.onclick = async () => {
     const stream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
     videoElem.srcObject = stream;
 
+    createTmpConn(stream);
+
+    const offer = await rtcConnection.createOffer();
+    console.log('offer created');
+    rtcConnection.setLocalDescription(offer);
+
+    sigServer.onAnswer = (answer) => {
+        rtcConnection.setRemoteDescription(new RTCSessionDescription(answer));
+        console.log('got answer');
+    }
+
+    sigServer.send({
+        type: "offer",
+        offer: offer
+    });
+
+    sessIdLabel.innerHTML = 'Session established. Id=' + sessId;
+}
+
+
+
+btnSessNew.onclick = setUpPublisher_v1;
+
+btnJoinSess.onclick = async () => {
+
+    const nickname = Date.now().toString();
+    
+    sigServer = new SignalingServer(`${wsProtocol}://${window.location.host}`);
+
+    console.log('j gona connect');
+    await sigServer.connect();
+    console.log('j connected');
+
     rtcConnection = new RTCPeerConnection({});
+
+    rtcConnection.ontrack = function (e) {
+        videoElem.srcObject = e.streams[0];
+    };
+
+    rtcConnection.onicecandidate = function (event) {
+        console.log('on ice')
+        if (event.candidate) {
+            sigServer.send({
+                type: "candidate",
+                candidate: event.candidate,
+                nickname
+            });
+        }
+    };
+
+    sigServer.onOffer = (offer) => {
+        console.log('got offer')
+        rtcConnection.setRemoteDescription(new RTCSessionDescription(offer));
+        rtcConnection.createAnswer().then(function (answer) {
+            rtcConnection.setLocalDescription(answer);
+            sigServer.send({
+                type: "answer",
+                answer: answer,
+                nickname
+            });
+        }, function (error) {
+            console.error(error);
+        });
+    }
+
+    sigServer.onCandidate = (cand) => {
+        rtcConnection.addIceCandidate(new RTCIceCandidate(cand));
+    }
+
+    sigServer.send({
+        type: 'join',
+        sess_id: inputSessId.value,
+        nickname: nickname
+    });
+}
+
+async function setUpPublisher_v1() {
+    sigServer = new SignalingServer(`${wsProtocol}://${window.location.host}`);
+
+    console.log('gona connect');
+    await sigServer.connect();
+    console.log('connected');
+
+    let sessId = await sigServer.logIn();
+    console.log('logged in with sess_id=' + sessId);
+
+    const displayMediaOptions = {
+        video: {
+            cursor: "never"
+        },
+        audio: false
+    };
+    const stream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+    videoElem.srcObject = stream;
+
+    rtcConnection = new RTCPeerConnection({
+        iceServers: [{ 'urls': 'stun:stun.l.google.com:19302' }]
+    });
     rtcConnection.addStream(stream);
 
     // Setup ice handling
@@ -231,57 +351,4 @@ btnSessNew.onclick = async () => {
     });
 
     sessIdLabel.innerHTML = 'Session established. Id=' + sessId;
-}
-
-btnJoinSess.onclick = async () => {
-    
-    sigServer = new SignalingServer(`${wsProtocol}://${window.location.host}`);
-
-    console.log('j gona connect');
-    await sigServer.connect();
-    console.log('j connected');
-
-    rtcConnection = new RTCPeerConnection({});
-
-    rtcConnection.ontrack = function (e) {
-        videoElem.srcObject = e.streams[0];
-    };
-
-    rtcConnection.onicecandidate = function (event) {
-        console.log('on ice')
-        if (event.candidate) {
-            sigServer.send({
-                type: "candidate",
-                candidate: event.candidate
-            });
-        }
-    };
-
-    sigServer.onOffer = (offer) => {
-        console.log('got offer')
-        rtcConnection.setRemoteDescription(new RTCSessionDescription(offer));
-        rtcConnection.createAnswer().then(function (answer) {
-            rtcConnection.setLocalDescription(answer);
-            sigServer.send({
-                type: "answer",
-                answer: answer
-            });
-        }, function (error) {
-            console.error(error);
-        });
-    }
-
-    sigServer.onCandidate = (cand) => {
-        rtcConnection.addIceCandidate(new RTCIceCandidate(cand));
-    }
-
-    sigServer.send({
-        type: 'join',
-        sess_id: inputSessId.value,
-        nickname: Date.now().toString() //inputNickname.value
-    });
-}
-
-function setupPeerConnection(stream) {
-
 }

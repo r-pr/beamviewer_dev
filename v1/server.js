@@ -51,7 +51,12 @@ function handleCandidate(msg, conn) {
         conn.__candidates.push(msg.candidate);
         console.log('handled publisher"s candidate');
     } else if (conn.__type === 'subscriber') {
-        console.log('todo: handle subscriber"s candidate');
+        if (conn.__publisher) {
+            wsSendJson(msg, conn.__publisher);
+            console.log('candidate from sub sent to pub');
+        } else {
+            console.error('handleCandidate: subscriber has no publisher')
+        }
     } else {
         console.log('err: candidate from wrong connection');
     }
