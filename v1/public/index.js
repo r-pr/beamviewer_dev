@@ -186,24 +186,47 @@ const subscribers = {
 };
 
 let tmpConn = null;
-let candidatesSent = false;
 
-async function setUpPublisher_v2() {
+let candidatesBuff = [];
+let offerSent = false;
+
+const setUpPublisher_v2 = async () => {
 
     function createTmpConn(strm) {
+        candidatesBuff = [];
         tmpConn = new RTCPeerConnection({});
         tmpConn.addStream(stream);
-        if (!candidatesSent) {
-            tmpConn.onicecandidate = function (event) {
-                console.log('on ice')
-                if (event.candidate) {
+        tmpConn.onicecandidate = function (event) {
+            console.log('on ice')
+            if (event.candidate) {
+                if (offerSent){
                     sigServer.send({
                         type: "candidate",
                         candidate: event.candidate
                     });
+                    console.log('candidate sent');
+                } else {
+                    console.log('candidate buffered');
+                    candidatesBuff.push(event.candidate);
                 }
-            };
-            candidatesSent = true;
+                
+            }
+        };
+    }
+
+    function sendOffer(off) {
+        sigServer.send({
+            type: "offer",
+            offer: off
+        });
+        offerSent = true;
+        if (candidatesBuff.length) {
+            candidatesBuff.forEach(cand => {
+                sigServer.send({
+                    type: "candidate",
+                    candidate: cand
+                })
+            })
         }
     }
 
@@ -227,23 +250,38 @@ async function setUpPublisher_v2() {
 
     createTmpConn(stream);
 
-    const offer = await rtcConnection.createOffer();
+    const offer = await tmpConn.createOffer();
     console.log('offer created');
-    rtcConnection.setLocalDescription(offer);
+    tmpConn.setLocalDescription(offer);
 
     sigServer.onAnswer = (answer) => {
-        rtcConnection.setRemoteDescription(new RTCSessionDescription(answer));
+        tmpConn.onicecandidate = () => {};
+        tmpConn.setRemoteDescription(new RTCSessionDescription(answer));
         console.log('got answer');
+        subscribers[answer.nickname] = tmpConn;
+        (async () => {
+            console.log('creating new tmp connection...');
+            createTmpConn(stream);
+            const offer = await tmpConn.createOffer();
+            console.log('new offer created');
+            tmpConn.setLocalDescription(offer);
+            sendOffer(offer);
+
+        })();
     }
 
-    sigServer.send({
-        type: "offer",
-        offer: offer
-    });
+    sendOffer(offer);
 
-    sessIdLabel.innerHTML = 'Session established. Id=' + sessId;
+    sessIdLabel.innerHTML = 'Session established. Id=<b>' + sessId +'</b>';
+
+    hideAll();
 }
 
+function hideAll(){
+    btnSessNew.style.display = 'none';
+    btnJoinSess.style.display = 'none';
+    inputSessId.style.display = 'none';
+}
 
 btnJoinSess.onclick = async () => {
 
@@ -273,6 +311,11 @@ btnJoinSess.onclick = async () => {
     };
 
     sigServer.onOffer = (offer) => {
+        hideAll();
+        videoElem.style.position = 'absolute';
+        videoElem.style.top = '0px';
+        videoElem.style.left = '0px';
+        videoElem.style.height = '100vh';
         console.log('got offer')
         rtcConnection.setRemoteDescription(new RTCSessionDescription(offer));
         rtcConnection.createAnswer().then(function (answer) {
@@ -353,4 +396,4 @@ const setUpPublisher_v1 = async () => {
     sessIdLabel.innerHTML = 'Session established. Id=' + sessId;
 }
 
-btnSessNew.onclick = setUpPublisher_v1;
+btnSessNew.onclick = setUpPublisher_v2;

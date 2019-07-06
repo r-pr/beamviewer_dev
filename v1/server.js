@@ -44,6 +44,10 @@ function handleLogin(msg, conn) {
 function handleOffer(msg, conn) {
     conn.__offer = msg.offer;
     console.log('associated offer with sess_id=' + conn.__sessId);
+    if (conn.__type === 'publisher') {
+        conn.__candidates = [];
+        console.log('handleOffer::cleared candidates');
+    }
 }
 
 function handleCandidate(msg, conn) {
