@@ -245,9 +245,6 @@ async function setUpPublisher_v2() {
 }
 
 
-
-btnSessNew.onclick = setUpPublisher_v1;
-
 btnJoinSess.onclick = async () => {
 
     const nickname = Date.now().toString();
@@ -301,7 +298,7 @@ btnJoinSess.onclick = async () => {
     });
 }
 
-async function setUpPublisher_v1() {
+const setUpPublisher_v1 = async () => {
     sigServer = new SignalingServer(`${wsProtocol}://${window.location.host}`);
 
     console.log('gona connect');
@@ -321,7 +318,10 @@ async function setUpPublisher_v1() {
     videoElem.srcObject = stream;
 
     rtcConnection = new RTCPeerConnection({
-        iceServers: [{ 'urls': 'stun:stun.l.google.com:19302' }]
+        iceServers: [
+            { 'urls': 'stun:stun.l.google.com:19302' },
+            { 'urls': 'stun:stun4.l.google.com:19302' },
+        ]
     });
     rtcConnection.addStream(stream);
 
@@ -352,3 +352,5 @@ async function setUpPublisher_v1() {
 
     sessIdLabel.innerHTML = 'Session established. Id=' + sessId;
 }
+
+btnSessNew.onclick = setUpPublisher_v1;
