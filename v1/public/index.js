@@ -17,6 +17,8 @@ function SignalingServer(url) {
 
     let sessId = null;
 
+    let previousReconnectTime = 0;
+
     function onMessage(msg){
         let json = {}
         try {
@@ -73,24 +75,91 @@ function SignalingServer(url) {
         }
     }
 
+    const spleep = (msec) => {
+        return new Promise((resolve) => {
+            setTimeout(resolve, msec);
+        });
+    }
+
+    const reconnect = () => {
+        previousReconnectTime = Date.now();
+        ws = null;
+        const minDelay = 1;
+        const maxDelay = 10;
+        let delay = minDelay;
+        (async () => {
+            while (true) {
+                try {
+                    console.log('try reconnect');
+                    await this.connect();
+                    break;
+                } catch (e) {
+                    console.warn(e);
+                    
+                    if (delay < maxDelay) {
+                        delay++;
+                    }
+                    console.log(`reconnect failed, now sleeping ${delay} sec`);
+                    await spleep(delay * 1000);
+                }
+            }
+            console.log('reconnected');
+            if (sessId) {
+                console.log('was logged in before, logging after reconnect');
+                await this.logIn(sessId);
+                console.log('login after reconnect: ok');
+            }
+        })();
+    }
+
     this.getSessId = () => sessId;
 
     this.connect = () => {
         return new Promise((resolve, reject) => {
-            ws = new WebSocket(url);
+            try {
+                console.log('try construct websocket');
+                ws = new WebSocket(url);
+                console.log('ws constructed');
+            } catch (e) {
+                console.log('ws construct:: err');
+                reject(e);
+                return reconnect();
+            }
+
             ws.onopen = resolve;
-            ws.onerror = reject;
+
+            ws.onerror = (e) => {
+                console.warn('ws::on_error::'+ e);
+            }
             ws.onmessage = onMessage;
+            ws.onclose = () => {
+                ws.onerror = null;
+                ws.onmessage = null;
+                console.log("ws closed, gonna reconnect");
+                let delta = Date.now() - previousReconnectTime;
+                if (delta < 2000) {
+                    console.log(`wait 2000 msec before reconnect`);
+                    setTimeout(reconnect, 2000);
+                } else {
+                    reconnect();
+                }
+                
+            }
         });
     }
 
-    this.logIn = () => {
+    this.logIn = (sessionId) => {
         return new Promise((resolve, reject) => {
             pendingPromise = { resolve, reject };
-            sessId = generateRandomString();
+            if (!sessionId) {
+                sessionId = generateRandomString();
+                sessId = sessionId;
+            } else {
+                console.log('login, sessId=' + sessionId + ' (' + typeof sessionId + ')')
+            }
             this.send({
                 type: 'login',
-                sess_id: sessId
+                sess_id: sessionId
             });
         });
     }
@@ -209,7 +278,7 @@ btnJoinSess.onclick = async () => {
     sigServer.send({
         type: 'join',
         sess_id: inputSessId.value,
-        nickname: inputNickname.value
+        nickname: Date.now().toString() //inputNickname.value
     });
 }
 
