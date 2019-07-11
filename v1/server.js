@@ -7,7 +7,7 @@ const port = process.env.PORT || 3322
 
 // setting up http server
 
-app.use(express.static(path.join(__dirname, 'public') ))
+app.use(express.static(path.join(__dirname, '..', 'client', 'build') ))
 app.get('*', (req, res) => res.send('hello from Beamviewer'))
 
 const httpServer = http.createServer(app);

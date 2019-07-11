@@ -5,12 +5,23 @@ interface IProps {
     onDecision: (d: IUserAppMode) => void;
 }
 
-export default class InitialScreen extends React.Component<IProps, {}> {
+interface IState {
+    sessId: string;
+    nickName: string;
+}
+
+export default class InitialScreen extends React.Component<IProps, IState> {
 
     constructor(p: IProps, c: any) {
         super(p, c);
         this.onClickPub = this.onClickPub.bind(this);
         this.onClickSub = this.onClickSub.bind(this);
+        this.handleSessIdChange = this.handleSessIdChange.bind(this);
+        this.handleNickNameChnage = this.handleNickNameChnage.bind(this);
+        this.state = {
+            sessId: "",
+            nickName: "",
+        };
     }
 
     public render() {
@@ -23,6 +34,8 @@ export default class InitialScreen extends React.Component<IProps, {}> {
                                 type="text"
                                 className="form-control"
                                 placeholder="Session id"
+                                value={this.state.sessId}
+                                onChange={this.handleSessIdChange}
                             />
                         </div>
                         <div className="input-group mb-3">
@@ -30,6 +43,8 @@ export default class InitialScreen extends React.Component<IProps, {}> {
                                 type="text"
                                 className="form-control"
                                 placeholder="Nickname"
+                                value={this.state.nickName}
+                                onChange={this.handleNickNameChnage}
                             />
                         </div>
                         <button
@@ -55,6 +70,14 @@ export default class InitialScreen extends React.Component<IProps, {}> {
         );
     }
 
+    private handleSessIdChange(e: any) {
+        this.setState({sessId: e.target.value});
+    }
+
+    private handleNickNameChnage(e: any) {
+        this.setState({nickName: e.target.value});
+    }
+
     private onClickPub(e: any) {
         this.props.onDecision({
             mode: "pub",
@@ -64,8 +87,8 @@ export default class InitialScreen extends React.Component<IProps, {}> {
     private onClickSub(e: any) {
         this.props.onDecision({
             mode: "sub",
-            nickName: "user" + Date.now(),
-            sessionId: Date.now().toString(),
+            nickName:  this.state.nickName,
+            sessionId: this.state.sessId,
         });
     }
 }
