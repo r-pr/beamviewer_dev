@@ -53,10 +53,6 @@ function handleOffer(msg, conn) {
         conn.__candidates = [];
         //delete bufferedCandidates[conn.__sessId];
         console.log('handleOffer::cleared candidates');
-        setTimeout(() => {
-            console.log('test: close pub');
-            conn.close();
-        }, 10000);
     }
 }
 
