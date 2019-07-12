@@ -50,7 +50,7 @@ function handleOffer(msg, conn) {
     console.log('associated offer with sess_id=' + conn.__sessId);
     if (conn.__type === 'publisher') {
         conn.__candidates = [];
-        delete bufferedCandidates[conn.__sessId];
+        //delete bufferedCandidates[conn.__sessId];
         console.log('handleOffer::cleared candidates');
     }
 }
