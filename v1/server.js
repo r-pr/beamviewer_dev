@@ -19,6 +19,10 @@ const wsServer = new WebSocket.Server({ server: httpServer });
 // id -> conn
 const wsConnections = {};
 
+// КОСТЫЛЬ!
+// conn_id -> { candiates: arr, timeLastAdd: timestamp}
+const bufferedCandidates = {};
+
 function wsSendJson(json, conn) {
     let msg = JSON.stringify(json);
     if (conn.readyState !== 1) {
@@ -46,13 +50,44 @@ function handleOffer(msg, conn) {
     console.log('associated offer with sess_id=' + conn.__sessId);
     if (conn.__type === 'publisher') {
         conn.__candidates = [];
+        delete bufferedCandidates(conn.__sessId);
         console.log('handleOffer::cleared candidates');
     }
 }
 
+// temp: to save candidates b/w reconnects
+function pushCandidateToBuffer(sessId, candidate) {
+    if (typeof bufferedCandidates[sessId] === 'undefined') {
+        bufferedCandidates[sessId] = {
+            candidates: []
+        };
+    }
+    bufferedCandidates[sessId].candidates.push(candidate);
+    bufferedCandidates[sessId].timeLastAdd = Date.now();
+}
+
+function getCandidatesFromBuffer(sessId) {
+    if (typeof bufferedCandidates[sessId] === 'undefined') {
+        return [];
+    }
+    return bufferedCandidates[sessId];
+}
+
+setInterval(function () {
+    const timeThreshold = 1000*60*60*6; // 6 hours
+    const now = Date.now();
+    Object.keys(bufferedCandidates).forEach(sessId => {
+        if (now - bufferedCandidates[sessId].timeLastAdd > timeThreshold) {
+            // old session
+            delete bufferedCandidates[sessId];
+        }
+    });
+}, 1000*60*60);
+
 function handleCandidate(msg, conn) {
     if (conn.__type === 'publisher') {
         conn.__candidates.push(msg.candidate);
+        pushCandidateToBuffer(conn.__sessId, msg.candidate);
         console.log('handled publisher"s candidate');
     } else if (conn.__type === 'subscriber') {
         if (conn.__publisher) {
@@ -85,9 +120,17 @@ function handleJoin(msg, conn) {
         wsSendJson({type: 'join_resp', status: 'error', error: 'ENOTFOUND'}, conn);
         return;
     }
+    let candidates;
     if (!publisherConn.__candidates || !publisherConn.__candidates.length) {
-        wsSendJson({type: 'join_resp', status: 'error', error: 'ENOCAND'}, conn);
-        return;
+        const bufCands = getCandidatesFromBuffer(publisherConn.__sessId);
+        if (bufCands.length > 0) {
+            candidates = bufCands;
+        } else {
+            wsSendJson({type: 'join_resp', status: 'error', error: 'ENOCAND'}, conn);
+            return;
+        }
+    } else {
+        candidates = publisherConn.__candidates;
     }
     const nick = msg.nickname || 'anonymous';
     if (!publisherConn.__subscribers){
@@ -106,7 +149,7 @@ function handleJoin(msg, conn) {
     publisherConn.__subscribers.push(conn);
     wsSendJson({type: 'join_resp', status: 'ok'}, conn);
     wsSendJson({type: 'offer', offer: publisherConn.__offer}, conn);
-    publisherConn.__candidates.forEach(cand => {
+    candidates.forEach(cand => {
         wsSendJson({type: 'candidate', candidate: cand}, conn);
     });
 }

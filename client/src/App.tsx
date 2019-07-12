@@ -1,7 +1,7 @@
 import React from "react";
 
 import "./App.css";
-import InitialScreen from "./InitalScreen";
+import InitialScreen from "./InitialScreen";
 import { IUserAppMode } from "./interfaces";
 import PubScreen from "./PubScreen";
 import SubScreen from "./SubScreen";

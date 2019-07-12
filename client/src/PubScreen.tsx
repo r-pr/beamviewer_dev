@@ -37,7 +37,7 @@ export default class PubScreen extends React.Component<{}, IState> {
 
     public componentDidMount() {
         if (!this.userMedia.canGetDisplayMedia()) {
-            this.setState({error: "you have an old brower, go get a newer one"});
+            this.setState({error: "you have an old browser, go get a newer one"});
             return;
         }
         // (async () => {
@@ -90,84 +90,91 @@ export default class PubScreen extends React.Component<{}, IState> {
         // })();
 
         (async () => {
-            const sigServer = new SigServerClient(Settings.WS_SRV_URL);
+            try {
+                const sigServer = new SigServerClient(Settings.WS_SRV_URL);
 
-            function createTmpConn(strm: any) {
-                candidatesBuff = [];
-                tmpConn = new RTCPeerConnection({});
-                tmpConn.addStream(stream);
-                tmpConn.onicecandidate = function (event: any) {
-                    console.log("on ice");
-                    if (event.candidate) {
-                        if (offerSent) {
+                const createTmpConn = (strm: any) => {
+                    candidatesBuff = [];
+                    tmpConn = new RTCPeerConnection({});
+                    tmpConn.addStream(stream);
+                    tmpConn.onicecandidate = function (event: any) {
+                        console.log("on ice");
+                        if (event.candidate) {
+                            if (offerSent) {
+                                sigServer.send({
+                                    type: "candidate",
+                                    candidate: event.candidate,
+                                });
+                                console.log("candidate sent");
+                            } else {
+                                console.log("candidate buffered");
+                                candidatesBuff.push(event.candidate);
+                            }
+                        } else {
+                            console.log("no event.candidate::");
+                            console.log(event);
+                        }
+                    };
+                };
+
+                const sendOffer = (off: any) => {
+                    sigServer.send({
+                        type: "offer",
+                        offer: off,
+                    });
+                    offerSent = true;
+                    if (candidatesBuff.length) {
+                        candidatesBuff.forEach((cand) => {
                             sigServer.send({
                                 type: "candidate",
-                                candidate: event.candidate,
+                                candidate: cand,
                             });
-                            console.log("candidate sent");
-                        } else {
-                            console.log("candidate buffered");
-                            candidatesBuff.push(event.candidate);
-                        }
+                        });
                     }
                 };
-            }
 
-            function sendOffer(off: any) {
-                sigServer.send({
-                    type: "offer",
-                    offer: off,
-                });
-                offerSent = true;
-                if (candidatesBuff.length) {
-                    candidatesBuff.forEach((cand) => {
-                        sigServer.send({
-                            type: "candidate",
-                            candidate: cand,
-                        });
-                    });
+                console.log("gona connect");
+                await sigServer.connect();
+                console.log("connected");
+
+                await sigServer.logIn();
+                const sessId = sigServer.getSessId();
+                console.log("logged in with sess_id=" + sessId);
+
+                const stream = await this.userMedia.getDisplayMedia();
+
+                if (this.videoRef.current) {
+                    this.videoRef.current.srcObject = stream;
                 }
+
+                createTmpConn(stream);
+
+                const offer = await tmpConn.createOffer();
+                console.log("offer created");
+                tmpConn.setLocalDescription(offer);
+
+                sigServer.onAnswer = (answer: any) => {
+                    tmpConn.onicecandidate = () => {};
+                    tmpConn.setRemoteDescription(new RTCSessionDescription(answer));
+                    console.log("got answer");
+                    subscribers[answer.nickname] = tmpConn;
+                    (async () => {
+                        console.log("creating new tmp connection...");
+                        createTmpConn(stream);
+                        const offer = await tmpConn.createOffer();
+                        console.log("new offer created");
+                        tmpConn.setLocalDescription(offer);
+                        sendOffer(offer);
+                    })();
+                };
+
+                sendOffer(offer);
+
+                this.setState({sessId});
+            } catch (e) {
+                console.error(e);
+                this.setState({error: e.message});
             }
-
-            console.log("gona connect");
-            await sigServer.connect();
-            console.log("connected");
-
-            await sigServer.logIn();
-            const sessId = sigServer.getSessId();
-            console.log("logged in with sess_id=" + sessId);
-
-            const stream = await this.userMedia.getDisplayMedia();
-
-            if (this.videoRef.current) {
-                this.videoRef.current.srcObject = stream;
-            }
-
-            createTmpConn(stream);
-
-            const offer = await tmpConn.createOffer();
-            console.log("offer created");
-            tmpConn.setLocalDescription(offer);
-
-            sigServer.onAnswer = (answer: any) => {
-                tmpConn.onicecandidate = () => {};
-                tmpConn.setRemoteDescription(new RTCSessionDescription(answer));
-                console.log("got answer");
-                subscribers[answer.nickname] = tmpConn;
-                (async () => {
-                    console.log("creating new tmp connection...");
-                    createTmpConn(stream);
-                    const offer = await tmpConn.createOffer();
-                    console.log("new offer created");
-                    tmpConn.setLocalDescription(offer);
-                    sendOffer(offer);
-                })();
-            };
-
-            sendOffer(offer);
-
-            this.setState({sessId});
-
         })();
 
     }
