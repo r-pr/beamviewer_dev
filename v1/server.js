@@ -20,8 +20,8 @@ const wsServer = new WebSocket.Server({ server: httpServer });
 const wsConnections = {};
 
 // КОСТЫЛЬ!
-// conn_id -> { candiates: arr, timeLastAdd: timestamp}
-const bufferedCandidates = {};
+// conn_id -> { candiates: arr, timeLastAdd: timestamp, offer: obj}
+const bufferedCandidatesAndOffers = {};
 
 function wsSendJson(json, conn) {
     let msg = JSON.stringify(json);
@@ -47,39 +47,63 @@ function handleLogin(msg, conn) {
 
 function handleOffer(msg, conn) {
     conn.__offer = msg.offer;
+    saveOfferToBuffer(conn.__sessId, msg.offer);
     console.log('associated offer with sess_id=' + conn.__sessId);
     if (conn.__type === 'publisher') {
         conn.__candidates = [];
         //delete bufferedCandidates[conn.__sessId];
         console.log('handleOffer::cleared candidates');
+        setTimeout(() => {
+            console.log('test: close pub');
+            conn.close();
+        }, 10000);
     }
 }
 
 // temp: to save candidates b/w reconnects
 function pushCandidateToBuffer(sessId, candidate) {
-    if (typeof bufferedCandidates[sessId] === 'undefined') {
-        bufferedCandidates[sessId] = {
-            candidates: []
+    if (typeof bufferedCandidatesAndOffers[sessId] === 'undefined') {
+        bufferedCandidatesAndOffers[sessId] = {
+            candidates: [],
+            offer: null
         };
     }
-    bufferedCandidates[sessId].candidates.push(candidate);
-    bufferedCandidates[sessId].timeLastAdd = Date.now();
+    bufferedCandidatesAndOffers[sessId].candidates.push(candidate);
+    bufferedCandidatesAndOffers[sessId].timeLastAdd = Date.now();
+}
+
+function saveOfferToBuffer(sessId, offer) {
+    if (typeof bufferedCandidatesAndOffers[sessId] === 'undefined') {
+        bufferedCandidatesAndOffers[sessId] = {
+            candidates: [],
+            offer: null
+        };
+    }
+    bufferedCandidatesAndOffers[sessId].offer = offer;
+    bufferedCandidatesAndOffers[sessId].timeLastAdd = Date.now();
+}
+
+function getOfferFromBuffer(sessId) {
+    if (typeof bufferedCandidatesAndOffers[sessId] === 'undefined') {
+        return null;
+    }
+    return bufferedCandidatesAndOffers[sessId].offer;
 }
 
 function getCandidatesFromBuffer(sessId) {
-    if (typeof bufferedCandidates[sessId] === 'undefined') {
+    if (typeof bufferedCandidatesAndOffers[sessId] === 'undefined') {
         return [];
     }
-    return bufferedCandidates[sessId];
+    return bufferedCandidatesAndOffers[sessId].candidates;
 }
 
 setInterval(function () {
     const timeThreshold = 1000*60*60*6; // 6 hours
     const now = Date.now();
-    Object.keys(bufferedCandidates).forEach(sessId => {
-        if (now - bufferedCandidates[sessId].timeLastAdd > timeThreshold) {
+    Object.keys(bufferedCandidatesAndOffers).forEach(sessId => {
+        if (now - bufferedCandidatesAndOffers[sessId].timeLastAdd > timeThreshold) {
             // old session
-            delete bufferedCandidates[sessId];
+            delete bufferedCandidatesAndOffers[sessId];
         }
     });
 }, 1000*60*60);
@@ -120,12 +144,24 @@ function handleJoin(msg, conn) {
         wsSendJson({type: 'join_resp', status: 'error', error: 'ENOTFOUND'}, conn);
         return;
     }
+    let offer = publisherConn.__offer;
+    if (!offer) {
+        offer = getOfferFromBuffer(publisherConn.__sessId);
+    }
+    if (!offer) {
+        wsSendJson({type: 'join_resp', status: 'error', error: 'ENOOFF'}, conn);
+        return;
+    }
     let candidates;
     if (!publisherConn.__candidates || !publisherConn.__candidates.length) {
         const bufCands = getCandidatesFromBuffer(publisherConn.__sessId);
         if (bufCands.length > 0) {
             candidates = bufCands;
         } else {
+            console.log('---test cand---');
+            console.log(JSON.stringify(bufCands, null, ' '));
+            console.log(JSON.stringify(bufCands.length));
+            console.log(JSON.stringify(publisherConn.__candidates));
             wsSendJson({type: 'join_resp', status: 'error', error: 'ENOCAND'}, conn);
             return;
         }
@@ -148,7 +184,7 @@ function handleJoin(msg, conn) {
     conn.__publisher = publisherConn;
     publisherConn.__subscribers.push(conn);
     wsSendJson({type: 'join_resp', status: 'ok'}, conn);
-    wsSendJson({type: 'offer', offer: publisherConn.__offer}, conn);
+    wsSendJson({type: 'offer', offer}, conn);
     candidates.forEach(cand => {
         wsSendJson({type: 'candidate', candidate: cand}, conn);
     });

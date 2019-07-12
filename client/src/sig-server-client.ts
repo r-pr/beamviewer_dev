@@ -136,6 +136,10 @@ export class SigServerClient {
 
     private handleOffer(msg: any) {
         console.log(Date.now() + " ws: got offer");
+        if (!msg.offer) {
+            console.warn(".offer is " + msg.offer);
+            return;
+        }
         if (this.onOffer && typeof this.onOffer === "function") {
             this.onOffer(msg.offer);
         }

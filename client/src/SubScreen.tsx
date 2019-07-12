@@ -52,17 +52,23 @@ export default class SubScreen extends React.Component<IProps, {}> {
             };
 
             sigServer.onOffer = (offer: RTCSessionDescriptionInit) => {
-                rtcConnection.setRemoteDescription(new RTCSessionDescription(offer));
-                rtcConnection.createAnswer().then((answer) => {
-                    rtcConnection.setLocalDescription(answer);
-                    sigServer.send({
-                        type: "answer",
-                        answer,
-                        nickname,
+                console.log("sub:: onoffer: ", offer);
+                try {
+                    rtcConnection.setRemoteDescription(new RTCSessionDescription(offer));
+                    rtcConnection.createAnswer().then((answer) => {
+                        rtcConnection.setLocalDescription(answer);
+                        sigServer.send({
+                            type: "answer",
+                            answer,
+                            nickname,
+                        });
+                    }, (error) => {
+                        console.error(error);
                     });
-                }, (error) => {
-                    console.error(error);
-                });
+                } catch (e) {
+                    console.error(e);
+                }
+
             };
 
             sigServer.onCandidate = (cand: RTCIceCandidateInit) => {
