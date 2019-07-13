@@ -38,7 +38,8 @@ export default class InitialScreen extends React.Component<IProps, IState> {
                                 onChange={this.handleSessIdChange}
                             />
                         </div>
-                        <div className="input-group mb-3">
+                        {   // tslint:disable-next-line: jsx-no-multiline-js
+                            /* <div className="input-group mb-3">
                             <input
                                 type="text"
                                 className="form-control"
@@ -46,7 +47,7 @@ export default class InitialScreen extends React.Component<IProps, IState> {
                                 value={this.state.nickName}
                                 onChange={this.handleNickNameChnage}
                             />
-                        </div>
+                        </div> */}
                         <button
                             className="btn btn-primary btn-block"
                             onClick={this.onClickSub}
@@ -87,7 +88,8 @@ export default class InitialScreen extends React.Component<IProps, IState> {
     private onClickSub(e: any) {
         this.props.onDecision({
             mode: "sub",
-            nickName:  this.state.nickName,
+            // nickName:  this.state.nickName,
+            nickName: Date.now().toString(),
             sessionId: this.state.sessId,
         });
     }

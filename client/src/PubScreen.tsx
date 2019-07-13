@@ -8,6 +8,7 @@ import { UserMedia } from "./user-media";
 interface IState {
     sessId: string;
     error: string;
+    loading: boolean;
 }
 
 // dictionary. key = nick; val = rtcpeerconn
@@ -30,6 +31,7 @@ export default class PubScreen extends React.Component<{}, IState> {
         this.state = {
             sessId: "",
             error: "",
+            loading: true,
         };
         this.videoRef = React.createRef<HTMLVideoElement>();
         this.userMedia = new UserMedia();
@@ -170,7 +172,7 @@ export default class PubScreen extends React.Component<{}, IState> {
 
                 sendOffer(offer);
 
-                this.setState({sessId});
+                this.setState({sessId, loading: false});
             } catch (e) {
                 console.error(e);
                 this.setState({error: e.message});
@@ -183,22 +185,51 @@ export default class PubScreen extends React.Component<{}, IState> {
         return (
             <div className="row">
                 <div className="col-sm-6 col-md-4 col-lg-3">
-                    <video ref={this.videoRef} autoPlay={true} style={{width: "100%" }}/>
-                    <p>Session Id: <b>{this.state.sessId}</b></p>
-                    {this.getErrorElement()}
+                    <video
+                        ref={this.videoRef}
+                        autoPlay={true}
+                        style={{
+                            width: "100%",
+                            display: this.state.loading ? "none" : "block",
+                            border: "1px solid darkgray",
+                            borderRadius: "0.5em",
+                        }}
+                    />
+                    {this.getActiveElement()}
                 </div>
             </div>
         );
     }
 
-    private getErrorElement() {
-        if (this.state.error !== "") {
+    private getActiveElement(): JSX.Element {
+        if (this.state.error) {
             return (
                 <div className="alert alert-danger" role="alert">
                     {this.state.error}
                 </div>
             );
+        } else {
+            if (this.state.loading) {
+                return (
+                    <div className="d-flex justify-content-center">
+                        <div
+                            className="spinner-border"
+                            style={{width: "3rem", height: "3rem"}}
+                            role="status"
+                        >
+                            <span className="sr-only">Loading...</span>
+                        </div>
+                    </div>
+                );
+            } else {
+                return (
+                    <React.Fragment>
+                        <h5 style={{marginTop: "2em"}}>
+                            Session Id: <b>{this.state.sessId}</b>
+                        </h5>
+                    </React.Fragment>
+                );
+            }
         }
-        return <div/>;
     }
 }
