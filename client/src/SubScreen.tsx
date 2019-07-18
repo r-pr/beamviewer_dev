@@ -8,12 +8,19 @@ interface IProps {
     onExit: () => void;
 }
 
-export default class SubScreen extends React.Component<IProps, {}> {
+interface IState {
+    error: string;
+}
+
+export default class SubScreen extends React.Component<IProps, IState> {
 
     private videoRef: RefObject<HTMLVideoElement>;
 
     constructor(p: IProps) {
         super(p);
+        this.state = {
+            error: "",
+        };
         this.videoRef = React.createRef<HTMLVideoElement>();
         console.log("sub screen ctor::ws_srv_url:" + Settings.WS_SRV_URL);
     }
@@ -75,12 +82,12 @@ export default class SubScreen extends React.Component<IProps, {}> {
                 rtcConnection.addIceCandidate(new RTCIceCandidate(cand));
             };
 
-            sigServer.send({
-                type: "join",
-                sess_id: this.props.sessId,
-                nickname,
-            });
-
+            try {
+                sigServer.join(this.props.sessId, nickname);
+            } catch (e) {
+                console.warn(e);
+                this.setState({error: e.message});
+            }
         })();
     }
 

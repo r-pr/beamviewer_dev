@@ -88,6 +88,17 @@ export class SigServerClient {
         });
     }
 
+    public join(sessId: string, nickName: string) {
+        return new Promise((resolve, reject) => {
+            this.pendingPromise = { resolve, reject };
+            this.send({
+                type: "join",
+                sess_id: sessId,
+                nickname: nickName,
+            });
+        });
+    }
+
     public send(obj: IObj) {
         this.ws.send(JSON.stringify(obj));
     }
@@ -114,6 +125,9 @@ export class SigServerClient {
         case "answer":
             this.handleAnswer(json);
             break;
+        case "join_resp":
+            this.handleJoinResp(json);
+            break;
         }
     }
 
@@ -121,8 +135,16 @@ export class SigServerClient {
         if (resp.status === "ok") {
             this.pendingPromise.resolve(this.sessId);
         } else {
-            console.warn("ws: " + JSON.stringify(resp));
-            this.pendingPromise.resolve(null);
+            this.pendingPromise.reject(new Error(resp.error));
+        }
+        this.pendingPromise = {};
+    }
+
+    private handleJoinResp(resp: any) {
+        if (resp.status === "ok") {
+            this.pendingPromise.resolve();
+        } else {
+            this.pendingPromise.reject(new Error(resp.error));
         }
         this.pendingPromise = {};
     }

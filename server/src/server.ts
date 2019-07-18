@@ -14,7 +14,7 @@ const app = express();
 export {};
 
 // setting up http server
-app.use(express.static(path.join(__dirname, '..', 'client', 'build') ))
+app.use(express.static(path.join(__dirname, '..', '..', 'client', 'build') ))
 app.get('*', (req, res: express.Response) => res.send('hello from Beamviewer'))
 
 const httpServer = http.createServer(app);
