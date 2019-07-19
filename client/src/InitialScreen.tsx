@@ -3,6 +3,7 @@ import { IUserAppMode } from "./interfaces";
 
 interface IProps {
     onDecision: (d: IUserAppMode) => void;
+    error: string;
 }
 
 interface IState {
@@ -33,7 +34,7 @@ export default class InitialScreen extends React.Component<IProps, IState> {
                             <input
                                 type="text"
                                 className="form-control"
-                                placeholder="Session id"
+                                placeholder="Session ID"
                                 value={this.state.sessId}
                                 onChange={this.handleSessIdChange}
                             />
@@ -65,6 +66,20 @@ export default class InitialScreen extends React.Component<IProps, IState> {
                         >
                             Create session
                         </button>
+                    </div>
+                </div>
+                <div
+                    className="row"
+                    style={{ display: this.props.error ? "block" : "none" }}
+                >
+                    <div className="col-sm-6 col-md-4 col-lg-3 mb-3">
+                        <div
+                            className="alert alert-danger"
+                            role="alert"
+                            style={{marginTop: "1em"}}
+                        >
+                            {this.props.error}
+                        </div>
                     </div>
                 </div>
             </React.Fragment>

@@ -1,18 +1,22 @@
 import React, { RefObject } from "react";
+import { translateErrCode } from "./errors";
+import { IObj } from "./interfaces";
 import { Settings } from "./settings";
 import { SigServerClient } from "./sig-server-client";
+
+const RtcConnConfig: IObj = {
+    iceServers: [{
+        urls: "stun:stun.l.google.com:19302",
+    }],
+};
 
 interface IProps {
     sessId: string;
     nickName: string;
-    onExit: () => void;
+    onExit: (e?: Error) => void;
 }
 
-interface IState {
-    error: string;
-}
-
-export default class SubScreen extends React.Component<IProps, IState> {
+export default class SubScreen extends React.Component<IProps, {}> {
 
     private videoRef: RefObject<HTMLVideoElement>;
 
@@ -22,6 +26,7 @@ export default class SubScreen extends React.Component<IProps, IState> {
             error: "",
         };
         this.videoRef = React.createRef<HTMLVideoElement>();
+        this.exitOk = this.exitOk.bind(this);
         console.log("sub screen ctor::ws_srv_url:" + Settings.WS_SRV_URL);
     }
 
@@ -34,7 +39,7 @@ export default class SubScreen extends React.Component<IProps, IState> {
             await sigServer.connect();
             console.log("sub: connected");
 
-            const rtcConnection = new RTCPeerConnection({});
+            const rtcConnection = new RTCPeerConnection(RtcConnConfig);
 
             rtcConnection.ontrack = (e) => {
                 if (this.videoRef.current) {
@@ -83,10 +88,12 @@ export default class SubScreen extends React.Component<IProps, IState> {
             };
 
             try {
-                sigServer.join(this.props.sessId, nickname);
+                await sigServer.join(this.props.sessId, nickname);
             } catch (e) {
                 console.warn(e);
-                this.setState({error: e.message});
+                this.props.onExit(new Error(
+                    translateErrCode(e.message),
+                ));
             }
         })();
     }
@@ -110,7 +117,7 @@ export default class SubScreen extends React.Component<IProps, IState> {
                             fontSize: "2em",
                             cursor: "pointer",
                         }}
-                        onClick={this.props.onExit}
+                        onClick={this.exitOk}
                     >X
                     </div>
                 </div>
@@ -118,4 +125,7 @@ export default class SubScreen extends React.Component<IProps, IState> {
         );
     }
 
+    private exitOk() {
+        this.props.onExit();
+    }
 }

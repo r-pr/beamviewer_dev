@@ -8,16 +8,18 @@ import SubScreen from "./SubScreen";
 
 interface IState {
     appMode?: IUserAppMode;
+    error: string;
 }
 
 export default class App extends React.Component<{}, IState> {
 
     constructor(p: {}, c: any) {
         super(p, c);
-        this.state = {};
+        this.state = {
+            error: "",
+        };
         this.onUserDecision = this.onUserDecision.bind(this);
         this.onExit = this.onExit.bind(this);
-        // this.getActiveComponent = this.getActiveComponent.bind(this);
     }
 
     public render() {
@@ -33,8 +35,12 @@ export default class App extends React.Component<{}, IState> {
         );
     }
 
-    private onExit() {
-        this.setState({appMode: undefined});
+    private onExit(err?: Error) {
+        if (err) {
+            this.setState({appMode: undefined, error: err.message});
+        } else {
+            this.setState({appMode: undefined});
+        }
     }
 
     private onUserDecision(decision: IUserAppMode) {
@@ -57,7 +63,12 @@ export default class App extends React.Component<{}, IState> {
                 throw new Error();
             }
         } else {
-            return <InitialScreen onDecision={this.onUserDecision}/>;
+            return (
+                <InitialScreen
+                    onDecision={this.onUserDecision}
+                    error={this.state.error}
+                />
+            );
         }
     }
 }

@@ -3,7 +3,14 @@ import React, { RefObject } from "react";
 import { IObj } from "./interfaces";
 import { Settings } from "./settings";
 import { SigServerClient } from "./sig-server-client";
+import Spinner from "./Spinner";
 import { UserMedia } from "./user-media";
+
+const RtcConnConfig: IObj = {
+    iceServers: [{
+        urls: "stun:stun.l.google.com:19302",
+    }],
+};
 
 interface IState {
     sessId: string;
@@ -97,7 +104,7 @@ export default class PubScreen extends React.Component<{}, IState> {
 
                 const createTmpConn = (strm: any) => {
                     candidatesBuff = [];
-                    tmpConn = new RTCPeerConnection({});
+                    tmpConn = new RTCPeerConnection(RtcConnConfig);
                     tmpConn.addStream(stream);
                     tmpConn.onicecandidate = function (event: any) {
                         console.log("on ice");
@@ -210,22 +217,12 @@ export default class PubScreen extends React.Component<{}, IState> {
             );
         } else {
             if (this.state.loading) {
-                return (
-                    <div className="d-flex justify-content-center">
-                        <div
-                            className="spinner-border"
-                            style={{width: "3rem", height: "3rem"}}
-                            role="status"
-                        >
-                            <span className="sr-only">Loading...</span>
-                        </div>
-                    </div>
-                );
+                return <Spinner/>;
             } else {
                 return (
                     <React.Fragment>
                         <h5 style={{marginTop: "2em"}}>
-                            Session Id: <b>{this.state.sessId}</b>
+                            Session ID: <b>{this.state.sessId}</b>
                         </h5>
                     </React.Fragment>
                 );
