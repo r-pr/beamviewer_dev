@@ -6,6 +6,8 @@ import { SigServerClient } from "./sig-server-client";
 import Spinner from "./Spinner";
 import { UserMedia } from "./user-media";
 
+const { MAIN_DIV_CLASS } = Settings;
+
 const RtcConnConfig: IObj = {
     iceServers: [{
         urls: "stun:stun.l.google.com:19302",
@@ -191,7 +193,7 @@ export default class PubScreen extends React.Component<{}, IState> {
     public render() {
         return (
             <div className="row">
-                <div className="col-sm-6 col-md-4 col-lg-3">
+                <div className={MAIN_DIV_CLASS}>
                     <video
                         ref={this.videoRef}
                         autoPlay={true}

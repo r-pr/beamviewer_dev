@@ -1,5 +1,10 @@
 import React from "react";
 import { IUserAppMode } from "./interfaces";
+import { Settings} from "./settings";
+
+const { MAIN_DIV_CLASS } = Settings;
+
+const CHAR_CODE_ENTER = 13;
 
 interface IProps {
     onDecision: (d: IUserAppMode) => void;
@@ -17,6 +22,7 @@ export default class InitialScreen extends React.Component<IProps, IState> {
         super(p, c);
         this.onClickPub = this.onClickPub.bind(this);
         this.onClickSub = this.onClickSub.bind(this);
+        this.onKeyPress = this.onKeyPress.bind(this);
         this.handleSessIdChange = this.handleSessIdChange.bind(this);
         this.handleNickNameChnage = this.handleNickNameChnage.bind(this);
         this.state = {
@@ -29,7 +35,7 @@ export default class InitialScreen extends React.Component<IProps, IState> {
         return (
             <React.Fragment>
                 <div className="row">
-                    <div className="col-sm-6 col-md-4 col-lg-3">
+                    <div className={MAIN_DIV_CLASS}>
                         <div className="input-group mb-3">
                             <input
                                 type="text"
@@ -37,6 +43,8 @@ export default class InitialScreen extends React.Component<IProps, IState> {
                                 placeholder="Session ID"
                                 value={this.state.sessId}
                                 onChange={this.handleSessIdChange}
+                                onKeyPress={this.onKeyPress}
+                                style={{textAlign: "center"}}
                             />
                         </div>
                         {   // tslint:disable-next-line: jsx-no-multiline-js
@@ -59,7 +67,7 @@ export default class InitialScreen extends React.Component<IProps, IState> {
                 </div>
                 <div style={{minHeight: "2em"}}/>
                 <div className="row">
-                    <div className="col-sm-6 col-md-4 col-lg-3 mb-3">
+                    <div className={MAIN_DIV_CLASS}>
                         <button
                             className="btn btn-success btn-block"
                             onClick={this.onClickPub}
@@ -72,7 +80,7 @@ export default class InitialScreen extends React.Component<IProps, IState> {
                     className="row"
                     style={{ display: this.props.error ? "block" : "none" }}
                 >
-                    <div className="col-sm-6 col-md-4 col-lg-3 mb-3">
+                    <div className={MAIN_DIV_CLASS}>
                         <div
                             className="alert alert-danger"
                             role="alert"
@@ -92,6 +100,14 @@ export default class InitialScreen extends React.Component<IProps, IState> {
 
     private handleNickNameChnage(e: any) {
         this.setState({nickName: e.target.value.trim()});
+    }
+
+    private onKeyPress(evt: any) {
+        evt = evt || window.event;
+        const charCode = evt.keyCode || evt.which;
+        if (charCode === CHAR_CODE_ENTER) {
+            this.onClickSub(null);
+        }
     }
 
     private onClickPub(e: any) {

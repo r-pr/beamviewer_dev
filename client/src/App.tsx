@@ -26,7 +26,7 @@ export default class App extends React.Component<{}, IState> {
         return (
             <div className="container-fluid">
                 <div className="row">
-                    <h1 className="col-sm-12 App-header2">
+                    <h1 className="col-sm-12 App-header2" style={{textAlign: "center"}}>
                         BeamViewer
                     </h1>
                 </div>
