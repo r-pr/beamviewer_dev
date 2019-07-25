@@ -44,6 +44,7 @@ export default class PubScreen extends React.Component<{}, IState> {
         };
         this.videoRef = React.createRef<HTMLVideoElement>();
         this.userMedia = new UserMedia();
+        this.copySessIdToClipboard = this.copySessIdToClipboard.bind(this);
     }
 
     public componentDidMount() {
@@ -210,6 +211,12 @@ export default class PubScreen extends React.Component<{}, IState> {
         );
     }
 
+    private copySessIdToClipboard() {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(this.state.sessId);
+        }
+    }
+
     private getActiveElement(): JSX.Element {
         if (this.state.error) {
             return (
@@ -224,7 +231,14 @@ export default class PubScreen extends React.Component<{}, IState> {
                 return (
                     <React.Fragment>
                         <h5 style={{marginTop: "2em"}}>
-                            Session ID: <b>{this.state.sessId}</b>
+                            Session ID:  <b>{this.state.sessId}</b>
+                            &nbsp;&nbsp;
+                            <button
+                                className="btn btn-secondary btn-sm"
+                                onClick={this.copySessIdToClipboard}
+                            >
+                                Copy
+                            </button>
                         </h5>
                     </React.Fragment>
                 );
