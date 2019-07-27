@@ -15,6 +15,16 @@ const RtcConnConfig: IObj = {
         urls: "turn:numb.viagenie.ca",
         username: "webrtc",
         credential: "123qwe",
+    }, {
+        credential: "A/zNH/sv9dAKXqNtlBHOpEzBggY=",
+        maxRateKbps: "8000",
+        urls: [
+            "turn:64.233.161.127:19305?transport=udp",
+            "turn:[2a00:1450:4010:c01::7f]:19305?transport=udp",
+            "turn:64.233.161.127:19305?transport=tcp",
+            "turn:[2a00:1450:4010:c01::7f]:19305?transport=tcp",
+        ],
+        username: "CKqD9ukFEgZRyXfhhtwYqvGggqMKIICjBQ",
     }],
 };
 
