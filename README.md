@@ -2,6 +2,8 @@
 
 https://beamviewer22.herokuapp.com/
 
+TURN-сервер: https://numb.viagenie.ca/
+
 TODO:
 
 * сделать юзер френдли:

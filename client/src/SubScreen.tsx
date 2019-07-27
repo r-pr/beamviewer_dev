@@ -7,6 +7,10 @@ import { SigServerClient } from "./sig-server-client";
 const RtcConnConfig: IObj = {
     iceServers: [{
         urls: "stun:stun.l.google.com:19302",
+    }, {
+        urls: "turn:numb.viagenie.ca",
+        username: "webrtc",
+        credential: "123qwe",
     }],
 };
 
