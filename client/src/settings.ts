@@ -23,8 +23,8 @@ const RtcConnConfig: IObj = {
             "turn:64.233.161.127:19305?transport=tcp",
             "turn:[2a00:1450:4010:c01::7f]:19305?transport=tcp",
         ],
-        username: "CKqD9ukFEgZRyXfhhtwYqvGggqMKIICjBQ",
-        credential: "A/zNH/sv9dAKXqNtlBHOpEzBggY=",
+        username: "CIjz++kFEgazCCVchWoYqvGggqMKIICjBQ",
+        credential: "XD41hwV2dl6TRUElG4vd54JKf78=",
         maxRateKbps: "8000",
     }],
 };
