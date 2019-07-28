@@ -15,11 +15,7 @@ const RtcConnConfig: IObj = {
     iceServers: [{
         urls: "stun:stun.l.google.com:19302",
     }, {
-        urls: "turn:numb.viagenie.ca",
-        username: "rus.prokope@gmail.com",
-        credential: "123qwe",
-    }, /* {
-        // эти сервра получены способом описанным тут: 
+        // эти сервра получены способом описанным тут:
         // https://stackoverflow.com/questions/52206277/turn-server-appears-to-be-broken
         urls: [
             "turn:64.233.161.127:19305?transport=udp",
@@ -30,7 +26,7 @@ const RtcConnConfig: IObj = {
         username: "CKqD9ukFEgZRyXfhhtwYqvGggqMKIICjBQ",
         credential: "A/zNH/sv9dAKXqNtlBHOpEzBggY=",
         maxRateKbps: "8000",
-    }*/],
+    }],
 };
 
 export const Settings: ISettings = {
