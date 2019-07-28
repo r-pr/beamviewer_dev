@@ -8,26 +8,6 @@ import { UserMedia } from "./user-media";
 
 const { MAIN_DIV_CLASS } = Settings;
 
-const RtcConnConfig: IObj = {
-    iceServers: [{
-        urls: "stun:stun.l.google.com:19302",
-    }, {
-        urls: "turn:numb.viagenie.ca",
-        username: "webrtc",
-        credential: "123qwe",
-    }, {
-        credential: "A/zNH/sv9dAKXqNtlBHOpEzBggY=",
-        maxRateKbps: "8000",
-        urls: [
-            "turn:64.233.161.127:19305?transport=udp",
-            "turn:[2a00:1450:4010:c01::7f]:19305?transport=udp",
-            "turn:64.233.161.127:19305?transport=tcp",
-            "turn:[2a00:1450:4010:c01::7f]:19305?transport=tcp",
-        ],
-        username: "CKqD9ukFEgZRyXfhhtwYqvGggqMKIICjBQ",
-    }],
-};
-
 interface IState {
     sessId: string;
     error: string;
@@ -121,7 +101,7 @@ export default class PubScreen extends React.Component<{}, IState> {
 
                 const createTmpConn = (strm: any) => {
                     candidatesBuff = [];
-                    tmpConn = new RTCPeerConnection(RtcConnConfig);
+                    tmpConn = new RTCPeerConnection(Settings.RTC_CONN_CONDFIG);
                     tmpConn.addStream(stream);
                     tmpConn.onicecandidate = function (event: any) {
                         console.log("on ice");
