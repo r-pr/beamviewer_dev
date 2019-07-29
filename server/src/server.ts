@@ -4,9 +4,10 @@ import * as path from "path";
 import express from "express";
 import WebSocket from "ws";
 
-import { IConn, IObj, IMap, IConnCandAndOffer } from "./interfaces";
+import getIceServers from "./get-ice-servers";
+import { IConn, IConnCandAndOffer, IMap, IObj } from "./interfaces";
 
-const port = process.env.PORT || 3322
+const port = process.env.PORT || 3322;
 
 const app = express();
 
@@ -14,8 +15,22 @@ const app = express();
 export {};
 
 // setting up http server
-app.use(express.static(path.join(__dirname, '..', '..', 'client', 'build') ))
-app.get('*', (req, res: express.Response) => res.send('hello from Beamviewer'))
+app.use(express.static(path.join(__dirname, "..", "..", "client", "build") ));
+
+app.get("/ice_servers", (req, resp) => {
+    getIceServers((err, list) => {
+        resp.header("Access-Control-Allow-Origin", "*");
+        if (err) {
+            console.log(err.message);
+            resp.status(500);
+            resp.json({error: true});
+        } else {
+            resp.json({iceServers: list});
+        }
+    });
+});
+
+app.get("*", (req, res: express.Response) => res.send("hello from Beamviewer"));
 
 const httpServer = http.createServer(app);
 
@@ -31,7 +46,7 @@ const wsConnections: IMap<IConn> = {};
 const bufferedCandidatesAndOffers: IMap<IConnCandAndOffer> = {};
 
 function wsSendJson(json: IObj, conn: IConn) {
-    let msg = JSON.stringify(json);
+    const msg = JSON.stringify(json);
     if (conn.readyState !== 1) {
         console.error(`cannot send ${msg}: conn not open. readyState=${conn.readyState}` +
             `. __type=${conn.__type}. __sessId=${conn.__sessId}`);
@@ -40,35 +55,35 @@ function wsSendJson(json: IObj, conn: IConn) {
 }
 
 function handleLogin(msg: IObj, conn: IConn) {
-    if (!msg.sess_id || typeof wsConnections[msg.sess_id] !== 'undefined') {
-        wsSendJson({type: 'login_resp', status: 'error', error: 'EEXIST'}, conn);
+    if (!msg.sess_id || typeof wsConnections[msg.sess_id] !== "undefined") {
+        wsSendJson({type: "login_resp", status: "error", error: "EEXIST"}, conn);
         return;
     }
-    conn.__type = 'publisher';
+    conn.__type = "publisher";
     conn.__sessId = msg.sess_id;
     conn.__candidates = [];
     wsConnections[msg.sess_id] = conn;
-    wsSendJson({type: 'login_resp', status: 'ok'}, conn);
-    console.log('login: ok: sess_id: ' + msg.sess_id);
+    wsSendJson({type: "login_resp", status: "ok"}, conn);
+    console.log("login: ok: sess_id: " + msg.sess_id);
 }
 
 function handleOffer(msg: IObj, conn: IConn) {
     conn.__offer = msg.offer;
     saveOfferToBuffer(conn.__sessId, msg.offer);
-    console.log('associated offer with sess_id=' + conn.__sessId);
-    if (conn.__type === 'publisher') {
+    console.log("associated offer with sess_id=" + conn.__sessId);
+    if (conn.__type === "publisher") {
         conn.__candidates = [];
-        //delete bufferedCandidates[conn.__sessId];
-        console.log('handleOffer::cleared candidates');
+        // delete bufferedCandidates[conn.__sessId];
+        console.log("handleOffer::cleared candidates");
     }
 }
 
 // temp: to save candidates b/w reconnects
 function pushCandidateToBuffer(sessId: string, candidate: IObj) {
-    if (typeof bufferedCandidatesAndOffers[sessId] === 'undefined') {
+    if (typeof bufferedCandidatesAndOffers[sessId] === "undefined") {
         bufferedCandidatesAndOffers[sessId] = {
             candidates: [],
-            timeLastAdd: 0
+            timeLastAdd: 0,
         };
     }
     bufferedCandidatesAndOffers[sessId].candidates.push(candidate);
@@ -76,10 +91,10 @@ function pushCandidateToBuffer(sessId: string, candidate: IObj) {
 }
 
 function saveOfferToBuffer(sessId: string, offer: IObj) {
-    if (typeof bufferedCandidatesAndOffers[sessId] === 'undefined') {
+    if (typeof bufferedCandidatesAndOffers[sessId] === "undefined") {
         bufferedCandidatesAndOffers[sessId] = {
             candidates: [],
-            timeLastAdd: 0
+            timeLastAdd: 0,
         };
     }
     bufferedCandidatesAndOffers[sessId].offer = offer;
@@ -87,64 +102,64 @@ function saveOfferToBuffer(sessId: string, offer: IObj) {
 }
 
 function getOfferFromBuffer(sessId: string): IObj | undefined {
-    if (typeof bufferedCandidatesAndOffers[sessId] === 'undefined') {
+    if (typeof bufferedCandidatesAndOffers[sessId] === "undefined") {
         return undefined;
     }
     return bufferedCandidatesAndOffers[sessId].offer;
 }
 
 function getCandidatesFromBuffer(sessId: string) {
-    if (typeof bufferedCandidatesAndOffers[sessId] === 'undefined') {
+    if (typeof bufferedCandidatesAndOffers[sessId] === "undefined") {
         return [];
     }
     return bufferedCandidatesAndOffers[sessId].candidates;
 }
 
-setInterval(function () {
-    const timeThreshold = 1000*60*60*6; // 6 hours
+setInterval(() => {
+    const timeThreshold = 1000 * 60 * 60 * 6; // 6 hours
     const now = Date.now();
-    Object.keys(bufferedCandidatesAndOffers).forEach(sessId => {
+    Object.keys(bufferedCandidatesAndOffers).forEach((sessId) => {
         if (now - bufferedCandidatesAndOffers[sessId].timeLastAdd > timeThreshold) {
             // old session
             delete bufferedCandidatesAndOffers[sessId];
         }
     });
-}, 1000*60*60);
+}, 1000 * 60 * 60);
 
 function handleCandidate(msg: IObj, conn: IConn) {
-    if (conn.__type === 'publisher') {
+    if (conn.__type === "publisher") {
         conn.__candidates.push(msg.candidate);
         pushCandidateToBuffer(conn.__sessId, msg.candidate);
         console.log('handled publisher"s candidate');
-    } else if (conn.__type === 'subscriber') {
+    } else if (conn.__type === "subscriber") {
         if (conn.__publisher) {
             wsSendJson(msg, conn.__publisher);
-            console.log('candidate from sub sent to pub');
+            console.log("candidate from sub sent to pub");
         } else {
-            console.error('handleCandidate: subscriber has no publisher')
+            console.error("handleCandidate: subscriber has no publisher");
         }
     } else {
-        console.log('err: candidate from wrong connection');
+        console.log("err: candidate from wrong connection");
     }
 }
 
 function handleAnswer(msg: IObj, conn: IConn) {
-    if (conn.__type === 'publisher') {
-        console.error('handleAnswer: error: answer from publisher')
-    } else if (conn.__type === 'subscriber') {
+    if (conn.__type === "publisher") {
+        console.error("handleAnswer: error: answer from publisher");
+    } else if (conn.__type === "subscriber") {
         if (conn.__publisher) {
             wsSendJson(msg, conn.__publisher);
-            console.log('answer from sub sent to pub');
+            console.log("answer from sub sent to pub");
         } else {
-            console.error('handleAnswer: subscriber has no publisher')
+            console.error("handleAnswer: subscriber has no publisher");
         }
     }
 }
 
 function handleJoin(msg: IObj, conn: IConn) {
-    let publisherConn = wsConnections[msg.sess_id];
-    if (typeof publisherConn === 'undefined') {
-        wsSendJson({type: 'join_resp', status: 'error', error: 'ENOTFOUND'}, conn);
+    const publisherConn = wsConnections[msg.sess_id];
+    if (typeof publisherConn === "undefined") {
+        wsSendJson({type: "join_resp", status: "error", error: "ENOTFOUND"}, conn);
         return;
     }
     let offer: IObj | undefined = publisherConn.__offer;
@@ -152,7 +167,7 @@ function handleJoin(msg: IObj, conn: IConn) {
         offer = getOfferFromBuffer(publisherConn.__sessId);
     }
     if (!offer) {
-        wsSendJson({type: 'join_resp', status: 'error', error: 'ENOOFF'}, conn);
+        wsSendJson({type: "join_resp", status: "error", error: "ENOOFF"}, conn);
         return;
     }
     let candidates;
@@ -161,43 +176,42 @@ function handleJoin(msg: IObj, conn: IConn) {
         if (bufCands.length > 0) {
             candidates = bufCands;
         } else {
-            console.log('---test cand---');
-            console.log(JSON.stringify(bufCands, null, ' '));
+            console.log("---test cand---");
+            console.log(JSON.stringify(bufCands, null, " "));
             console.log(JSON.stringify(bufCands.length));
             console.log(JSON.stringify(publisherConn.__candidates));
-            wsSendJson({type: 'join_resp', status: 'error', error: 'ENOCAND'}, conn);
+            wsSendJson({type: "join_resp", status: "error", error: "ENOCAND"}, conn);
             return;
         }
     } else {
         candidates = publisherConn.__candidates;
     }
-    const nick = msg.nickname || 'anonymous';
-    if (!publisherConn.__subscribers){
+    const nick = msg.nickname || "anonymous";
+    if (!publisherConn.__subscribers) {
         publisherConn.__subscribers = [];
     }
-    for (let i = 0; i < publisherConn.__subscribers.length; i++) {
-        let sub = publisherConn.__subscribers[i];
+    for (const sub of publisherConn.__subscribers) {
         if (sub.__nick === nick) {
-            wsSendJson({type: 'join_resp', status: 'error', error: 'ENICK'}, conn);
+            wsSendJson({type: "join_resp", status: "error", error: "ENICK"}, conn);
             return;
         }
     }
-    conn.__type = 'subscriber';
+    conn.__type = "subscriber";
     conn.__nick = nick;
     conn.__publisher = publisherConn;
     publisherConn.__subscribers.push(conn);
-    wsSendJson({type: 'join_resp', status: 'ok'}, conn);
-    wsSendJson({type: 'offer', offer}, conn);
-    candidates.forEach(cand => {
-        wsSendJson({type: 'candidate', candidate: cand}, conn);
+    wsSendJson({type: "join_resp", status: "ok"}, conn);
+    wsSendJson({type: "offer", offer}, conn);
+    candidates.forEach((cand) => {
+        wsSendJson({type: "candidate", candidate: cand}, conn);
     });
 }
 
 function handleDisconnect(conn: IConn) {
-    if (conn.__type === 'publisher') {
-        console.log('publisher disconnected');
+    if (conn.__type === "publisher") {
+        console.log("publisher disconnected");
         if (conn.__subscribers) {
-            conn.__subscribers.forEach(subs => {
+            conn.__subscribers.forEach((subs) => {
                 try {
                     subs.close();
                 } catch (e) {
@@ -206,27 +220,27 @@ function handleDisconnect(conn: IConn) {
             });
         }
         delete wsConnections[conn.__sessId];
-    } else if (conn.__type === 'subscriber') {
-        console.log('subscriber disconnected');
+    } else if (conn.__type === "subscriber") {
+        console.log("subscriber disconnected");
         if (conn.__publisher) {
             if (conn.__publisher.__subscribers) {
-                conn.__publisher.__subscribers = conn.__publisher.__subscribers.filter(sub => {
+                conn.__publisher.__subscribers = conn.__publisher.__subscribers.filter((sub) => {
                     return sub.__nick !== conn.__nick;
                 });
             }
         }
     } else {
-        console.log('connection without type closed');
+        console.log("connection without type closed");
     }
 }
 
-wsServer.on('connection', function connection(ws) {
-    console.log('conn opened');
+wsServer.on("connection", function connection(ws) {
+    console.log("conn opened");
 
-    ws.on('message', function incoming(message) {
-        message = message + '';
-        let logMessage = message.length > 80 ? message.slice(0, 80) : message;
-        console.log('> ' + logMessage);
+    ws.on("message", function incoming(message) {
+        message = message + "";
+        const logMessage = message.length > 80 ? message.slice(0, 80) : message;
+        console.log("> " + logMessage);
         let json: IObj = {};
         try {
             json = JSON.parse(message);
@@ -235,28 +249,28 @@ wsServer.on('connection', function connection(ws) {
             return;
         }
         switch (json.type) {
-        case 'login':
+        case "login":
             handleLogin(json, ws as IConn);
             break;
-        case 'offer':
+        case "offer":
             handleOffer(json, ws as IConn);
             break;
-        case 'candidate':
+        case "candidate":
             handleCandidate(json, ws as IConn);
             break;
-        case 'join':
+        case "join":
             handleJoin(json, ws as IConn);
             break;
-        case 'answer':
+        case "answer":
             handleAnswer(json, ws as IConn);
             break;
         default:
-            console.log('unknown msg');
+            console.log("unknown msg");
         }
     });
 
-    ws.on('close', () => {
-        console.log('conn closed');
+    ws.on("close", () => {
+        console.log("conn closed");
         handleDisconnect(ws as IConn);
     });
 });

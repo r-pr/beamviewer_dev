@@ -1,6 +1,5 @@
 import React, { RefObject } from "react";
 import { translateErrCode } from "./errors";
-import { IObj } from "./interfaces";
 import { Settings } from "./settings";
 import { SigServerClient } from "./sig-server-client";
 
@@ -21,7 +20,6 @@ export default class SubScreen extends React.Component<IProps, {}> {
         };
         this.videoRef = React.createRef<HTMLVideoElement>();
         this.exitOk = this.exitOk.bind(this);
-        console.log("sub screen ctor::ws_srv_url:" + Settings.WS_SRV_URL);
     }
 
     public componentDidMount() {
@@ -33,7 +31,9 @@ export default class SubScreen extends React.Component<IProps, {}> {
             await sigServer.connect();
             console.log("sub: connected");
 
-            const rtcConnection = new RTCPeerConnection(Settings.RTC_CONN_CONDFIG);
+            const iceServers = await SigServerClient.getIceServers();
+
+            const rtcConnection = new RTCPeerConnection({iceServers});
 
             rtcConnection.ontrack = (e) => {
                 if (this.videoRef.current) {

@@ -1,4 +1,6 @@
+import axios from "axios";
 import { IObj } from "./interfaces";
+import { Settings } from "./settings";
 
 // TODO: finish
 
@@ -18,6 +20,19 @@ function spleep(msec: number) {
 }
 
 export class SigServerClient {
+
+    public static async getIceServers(): Promise<RTCIceServer[]> {
+        const url = `${Settings.HTTP_SRV_URL}/ice_servers`;
+        const resp = await axios.get(url);
+        if (resp.status !== 200 ||
+            !resp.data ||
+            !resp.data.iceServers
+        ) {
+            console.warn("default ice servers");
+            return Settings.DEFAULT_ICE_SERVERS;
+        }
+        return resp.data.iceServers;
+    }
 
     public onCandidate: any;
     public onOffer: any;

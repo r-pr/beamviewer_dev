@@ -46,64 +46,17 @@ export default class PubScreen extends React.Component<{}, IState> {
             this.setState({error: "you have an old browser, go get a newer one"});
             return;
         }
-        // (async () => {
-        //     const sigServer = new SigServerClient(Settings.WS_SRV_URL);
-
-        //     console.log("gona connect");
-        //     await sigServer.connect();
-        //     console.log("connected");
-
-        //     await sigServer.logIn();
-        //     const sessId: string = sigServer.getSessId();
-        //     console.log("logged in with sess_id=" + sessId);
-
-        //     const stream = await this.userMedia.getDisplayMedia();
-        //     console.log(stream);
-
-        //     if (this.videoRef.current) {
-        //         this.videoRef.current.srcObject = stream;
-        //     }
-
-        //     const rtcConnection: any = new RTCPeerConnection({});
-        //     rtcConnection.addStream(stream);
-
-        //     // Setup ice handling
-        //     rtcConnection.onicecandidate = (event: any) => {
-        //         console.log("on ice");
-        //         if (event.candidate) {
-        //             sigServer.send({
-        //                 type: "candidate",
-        //                 candidate: event.candidate,
-        //             });
-        //         }
-        //     };
-
-        //     const offer = await rtcConnection.createOffer();
-        //     console.log("offer created");
-        //     rtcConnection.setLocalDescription(offer);
-
-        //     sigServer.onAnswer = (answer: any) => {
-        //         rtcConnection.setRemoteDescription(new RTCSessionDescription(answer));
-        //         console.log("got answer");
-        //     };
-
-        //     sigServer.send({
-        //         type: "offer",
-        //         offer,
-        //     });
-
-        //     this.setState({sessId});
-        // })();
-
         (async () => {
             try {
                 const sigServer = new SigServerClient(Settings.WS_SRV_URL);
 
+                const iceServers = await SigServerClient.getIceServers();
+
                 const createTmpConn = (strm: any) => {
                     candidatesBuff = [];
-                    tmpConn = new RTCPeerConnection(Settings.RTC_CONN_CONDFIG);
+                    tmpConn = new RTCPeerConnection({iceServers});
                     tmpConn.addStream(stream);
-                    tmpConn.onicecandidate = function (event: any) {
+                    tmpConn.onicecandidate = (event: any) => {
                         console.log("on ice");
                         if (event.candidate) {
                             if (offerSent) {
