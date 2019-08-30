@@ -1,9 +1,0 @@
-{
-    "extends": "tslint:recommended",
-    "linterOptions": {
-        "exclude": ["**/lib.dom.d.ts"]
-    },
-    "rules": {
-        "no-console": [false]
-    }
-}
